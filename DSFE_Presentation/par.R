@@ -43,4 +43,5 @@ ggplot(par, aes(fill=ownership, x = project_type, y = PAR)) +
 ggplot(par, aes(fill=location, x = project_type, y = PAR)) +
   geom_bar(position="dodge", stat="identity") +
   labs(x = "", y = "") + 
-  scale_fill_manual("location", values = c("coral2", "gray", "steelblue", "skyblue"))
+  scale_fill_manual("location", 
+                    values = c("coral2", "gray", "steelblue", "skyblue"))

@@ -94,7 +94,7 @@ names(temp) <- c("month", "minimum", "average",
 
 head(temp)
 
-temp<- temp %>% 
+temp <- temp %>% 
   pivot_longer(cols = c("minimum", "average", 
                         "maximum"), 
                names_to = "minimum", 
@@ -104,13 +104,15 @@ head(temp)
 
 names(temp) <- c("month", "temp_range", "temp")
 
-temp<- temp %>%
+temp <- temp %>%
   mutate(month = month.abb[as.numeric(month)])
 
 head(temp)
 
   
-ggplot(temp, aes(fill=temp_range, y=value, x= month)) +
+ggplot(temp, aes(fill=factor(temp_range, 
+                             levels=c("maximum", "average", "minimum")), 
+                 y=temp, x= month)) +
   geom_bar(position = "stack", stat = "identity") +
   scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
                             "May", "Jun", "Jul", "Aug", "Sep",
@@ -135,16 +137,18 @@ ggplot(tmp_pro, aes(x = Temp, y = Production)) +
   geom_point(color = "coral2") + 
   stat_smooth(method="lm", formula = y ~ poly(x,2))
 
-temp <- 36
+day_tmp <- 36
 y_i <- 116.529
 c2 <- 1.906658
 c3 <- -0.01361731
 
-production <- y_i + (c2*temp) + (c3*(temp^2))
+production <- y_i + (c2*day_tmp) + (c3*(day_tmp^2))
 production
 
+#### estimate processing ####
+
 min_max_tmp$date <- format(as.Date(min_max_tmp$date, 
-                            format = "%y-%m-%d"), "%m")
+                                   format = "%y-%m-%d"), "%m")
 
 min_max_tmp <- min_max_tmp %>% 
   group_by(date) %>%
@@ -154,10 +158,39 @@ min_max_tmp <- min_max_tmp %>%
   )
 
 names(min_max_tmp) <- c("month", "minimum", "average",
-                 "maximum")
+                        "maximum")
+
+min_max_tmp$month <- as.numeric(min_max_tmp$month)
 
 min_max_tmp
 
 est <- read_csv("div_est.csv")
+
+est$WBS <- NULL
+est$UOM <- NULL
+
+est$Start <- mdy(est$Start)
+est$End <- mdy(est$End)
+est$last_mo_day <- ceiling_date(ymd(est$Start), "month") - days(1)
+
+est$f_m_days <- difftime(est$last_mo_day, est$Start)
+est$f_m_days <- as.numeric(gsub("\\D", "", est$f_m_days))
+
+est$e_m_days <- difftime(est$End, est$last_mo_day)
+est$e_m_days <- as.numeric(gsub("\\D", "", est$e_m_days))
+
+est$p_s_mo <- est$f_m_days / est$Duration
+est$P_e_mo <- est$e_m_days / est$Duration
+
+est$month <- if_else(est$p_s_mo>0.5, est$Start, est$End)
+
+est <- select(est, -c(10:14))
+est$month <- month(ymd(est$month))
+
+est <- left_join(est, min_max_tmp, by="month")
+
+est$temp <- if_else(est$maximum>80, est$maximum, est$minimum)
+
+
 
 #### weather adjustments ####

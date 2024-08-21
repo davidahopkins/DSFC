@@ -207,8 +207,7 @@ est$t_month <- format(as.Date(est$t_month,
                                    format = "%y-%m-%d"), "%m")
 est$t_month <- as.numeric(est$t_month)
 
-#est <- left_join(est, min_max_tmp, by="t_month")
-est <- merge(est, min_max_tmp)
+est <- left_join(est, min_max_tmp, by="t_month")
 
 est$temp <- if_else(est$maximum>80, est$maximum, est$minimum)
 
@@ -229,11 +228,13 @@ results <- data.frame(start_mo = c(est$month[1]),
                       )
 
 est_res <- rbind(est_res, results)
-rbind(est_res, results)
+#rbind(est_res, results)
 
 #### weather adjustments ####
 
-est$month <- est$month + 1
+est$month <- if_else(est$month == 12, 1, est$month + 1)
 
 est$Start <- as.Date(paste(est$year, est$month, est$day), "%Y%m%d")
 est$End <- est$End + est$Duration
+
+est <- est %>% select(-minimum, -average, -maximum)

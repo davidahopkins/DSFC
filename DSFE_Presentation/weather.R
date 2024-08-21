@@ -137,8 +137,24 @@ ggplot(tmp_pro, aes(x = Temp, y = Production)) +
   geom_point(color = "coral2") + 
   stat_smooth(method="lm", formula = y ~ poly(x,2))
 
-day_tmp <- 36
-y_i <- 116.529
+### Var from Mean ###
+
+tmp_pro$mean <- mean(tmp_pro$Production)
+
+tmp_pro$diff <- tmp_pro$Production - tmp_pro$mean
+
+ggplot(tmp_pro, aes(x = Temp, y = diff)) +
+  geom_point(color = "coral2")
+
+tmp_reg2 <- lm(diff ~ poly(Temp, 2, raw = T), data = tmp_pro)
+summary(tmp_reg2)
+
+ggplot(tmp_pro, aes(x = Temp, y = diff)) +
+  geom_point(color = "coral2") + 
+  stat_smooth(method="lm", formula = y ~ poly(x,2))
+
+day_tmp <- 40
+y_i <- -61.02194
 c2 <- 1.906658
 c3 <- -0.01361731
 
@@ -157,10 +173,10 @@ min_max_tmp <- min_max_tmp %>%
             mean_max_temp = mean(max_temp, na.rm = TRUE)
   )
 
-names(min_max_tmp) <- c("month", "minimum", "average",
+names(min_max_tmp) <- c("t_month", "minimum", "average",
                         "maximum")
 
-min_max_tmp$month <- as.numeric(min_max_tmp$month)
+min_max_tmp$t_month <- as.numeric(min_max_tmp$t_month)
 
 min_max_tmp
 
@@ -173,6 +189,10 @@ est$Start <- mdy(est$Start)
 est$End <- mdy(est$End)
 est$last_mo_day <- ceiling_date(ymd(est$Start), "month") - days(1)
 
+est$year <- year(ymd(est$Start))
+est$month <- month(ymd(est$Start))
+est$day <- day(ymd(est$Start))
+
 est$f_m_days <- difftime(est$last_mo_day, est$Start)
 est$f_m_days <- as.numeric(gsub("\\D", "", est$f_m_days))
 
@@ -182,15 +202,38 @@ est$e_m_days <- as.numeric(gsub("\\D", "", est$e_m_days))
 est$p_s_mo <- est$f_m_days / est$Duration
 est$P_e_mo <- est$e_m_days / est$Duration
 
-est$month <- if_else(est$p_s_mo>0.5, est$Start, est$End)
+est$t_month <- if_else(est$p_s_mo>0.5, est$Start, est$End)
+est$t_month <- format(as.Date(est$t_month, 
+                                   format = "%y-%m-%d"), "%m")
+est$t_month <- as.numeric(est$t_month)
 
-est <- select(est, -c(10:14))
-est$month <- month(ymd(est$month))
-
-est <- left_join(est, min_max_tmp, by="month")
+#est <- left_join(est, min_max_tmp, by="t_month")
+est <- merge(est, min_max_tmp)
 
 est$temp <- if_else(est$maximum>80, est$maximum, est$minimum)
 
+est$adj_crew_hrs <- est$Qty / 
+  (est$Production + (y_i + (c2*est$temp) + (c3*(est$temp^2))))
 
+est$adj_lbr_cost <- est$adj_crew_hrs * est$`Labor Rate`
+
+est_res <- data.frame(matrix(ncol = 5, nrow = 0))
+colnames(est_res) <- c("start_mo", "ttl_crew_hrs", "ttl_lbr_cost", 
+                       "adj_crew_hrs", "adj_lbr_cost")
+
+results <- data.frame(start_mo = c(est$month[1]),
+                      ttl_crew_hrs = sum(est$`Labor Hours`), 
+                      ttl_lbr_cost = sum(est$`Labor Total`), 
+                      adj_crew_hrs = sum(est$adj_crew_hrs),
+                      adj_lbr_cost = sum(est$adj_lbr_cost)
+                      )
+
+est_res <- rbind(est_res, results)
+rbind(est_res, results)
 
 #### weather adjustments ####
+
+est$month <- est$month + 1
+
+est$Start <- as.Date(paste(est$year, est$month, est$day), "%Y%m%d")
+est$End <- est$End + est$Duration

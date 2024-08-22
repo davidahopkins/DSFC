@@ -189,52 +189,91 @@ est$Start <- mdy(est$Start)
 est$End <- mdy(est$End)
 est$last_mo_day <- ceiling_date(ymd(est$Start), "month") - days(1)
 
-est$year <- year(ymd(est$Start))
-est$month <- month(ymd(est$Start))
-est$day <- day(ymd(est$Start))
-
-est$f_m_days <- difftime(est$last_mo_day, est$Start)
-est$f_m_days <- as.numeric(gsub("\\D", "", est$f_m_days))
-
-est$e_m_days <- difftime(est$End, est$last_mo_day)
-est$e_m_days <- as.numeric(gsub("\\D", "", est$e_m_days))
-
-est$p_s_mo <- est$f_m_days / est$Duration
-est$P_e_mo <- est$e_m_days / est$Duration
-
-est$t_month <- if_else(est$p_s_mo>0.5, est$Start, est$End)
-est$t_month <- format(as.Date(est$t_month, 
-                                   format = "%y-%m-%d"), "%m")
-est$t_month <- as.numeric(est$t_month)
-
-est <- left_join(est, min_max_tmp, by="t_month")
-
-est$temp <- if_else(est$maximum>80, est$maximum, est$minimum)
-
-est$adj_crew_hrs <- est$Qty / 
-  (est$Production + (y_i + (c2*est$temp) + (c3*(est$temp^2))))
-
-est$adj_lbr_cost <- est$adj_crew_hrs * est$`Labor Rate`
+#### weather adjustments ####
 
 est_res <- data.frame(matrix(ncol = 5, nrow = 0))
 colnames(est_res) <- c("start_mo", "ttl_crew_hrs", "ttl_lbr_cost", 
                        "adj_crew_hrs", "adj_lbr_cost")
 
-results <- data.frame(start_mo = c(est$month[1]),
+for(i in 1:12) {
+
+  #month choice based on percentage of work
+  est$f_m_days <- difftime(est$last_mo_day, est$Start)
+  est$f_m_days <- as.numeric(gsub("\\D", "", est$f_m_days))
+  
+  est$e_m_days <- difftime(est$End, est$last_mo_day)
+  est$e_m_days <- as.numeric(gsub("\\D", "", est$e_m_days))
+  
+  est$p_s_mo <- est$f_m_days / est$Duration
+  est$P_e_mo <- est$e_m_days / est$Duration
+  
+  est$t_month <- if_else(est$p_s_mo>0.5, est$Start, est$End)
+  est$t_month <- format(as.Date(est$t_month, 
+                                format = "%y-%m-%d"), "%m")
+  est$t_month <- as.numeric(est$t_month)
+  
+  #adding temp data and labor adjustment
+  est <- left_join(est, min_max_tmp, by="t_month")
+  
+  est$temp <- if_else(est$maximum>80, est$maximum, est$minimum)
+  
+  est$adj_crew_hrs <- est$Qty / 
+    (est$Production + (y_i + (c2*est$temp) + (c3*(est$temp^2))))
+  
+  est$adj_lbr_cost <- est$adj_crew_hrs * est$`Labor Rate`
+
+  #copy results to results dataframe
+  results <- data.frame(start_mo = c(est$month[1]),
                       ttl_crew_hrs = sum(est$`Labor Hours`), 
                       ttl_lbr_cost = sum(est$`Labor Total`), 
                       adj_crew_hrs = sum(est$adj_crew_hrs),
                       adj_lbr_cost = sum(est$adj_lbr_cost)
                       )
 
-est_res <- rbind(est_res, results)
-#rbind(est_res, results)
+  est_res <- rbind(est_res, results)
 
-#### weather adjustments ####
+  est$Start <- est$Start %m+% months(1)
+  est$End <- est$End + est$Duration
 
-est$month <- if_else(est$month == 12, 1, est$month + 1)
+  est <- est %>% select(-minimum, -average, -maximum)
+}
 
-est$Start <- as.Date(paste(est$year, est$month, est$day), "%Y%m%d")
-est$End <- est$End + est$Duration
+est_res <- est_res %>%
+  mutate(month = month.abb[as.numeric(start_mo)])
 
-est <- est %>% select(-minimum, -average, -maximum)
+est_res$start_mo <- NULL
+
+est_res$hrs_var <- est_res$adj_crew_hrs - est_res$ttl_crew_hrs
+est_res$cost_var <- est_res$adj_lbr_cost - est_res$ttl_lbr_cost
+
+write_csv(est_res, "est_res.csv")
+
+ggplot(est_res, aes(x = month, y = adj_crew_hrs)) +
+  geom_bar(position="dodge", stat="identity", fill="coral2") +
+  scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug", "Sep",
+                            "Oct", "Nov", "Dec")) +
+  labs(x = "Month", y = "Labor Hours")
+
+ggplot(est_res, aes(x = month, y = adj_lbr_cost)) +
+  geom_bar(position="dodge", stat="identity", fill="coral2") +
+  scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug", "Sep",
+                            "Oct", "Nov", "Dec")) +
+  labs(x = "Month", y = "Labor Cost")
+
+ggplot(est_res, aes(x = month, y = hrs_var)) +
+  geom_bar(position="dodge", stat="identity", fill="steelblue") +
+  scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug", "Sep",
+                            "Oct", "Nov", "Dec")) +
+  labs(x = "Month", y = "Labor Hours Difference")
+
+ggplot(est_res, aes(x = month, y = cost_var)) +
+  geom_bar(position="dodge", stat="identity", fill="steelblue") +
+  scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug", "Sep",
+                            "Oct", "Nov", "Dec")) +
+  labs(x = "Month", y = "Labor Cost Difference")
+
+

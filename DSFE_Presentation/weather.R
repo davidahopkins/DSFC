@@ -18,6 +18,8 @@ library(readr)
 
 #### weather data processing ####
 
+## Rainfall
+
 precip <- read_csv("noaa_data.csv")
 head(precip)
 
@@ -47,6 +49,8 @@ precip_avg <- precip %>%
 ggplot(precip_avg, aes(x = month, y = rain_days)) +
   geom_bar(position="dodge", stat="identity", fill="coral2") +
   labs(x = "Date", y = "Days Rainfall > 0.125")
+
+## Temp
 
 avgt <- read_csv("avgt.csv")
 avgt <- avgt[-c(1:3),]

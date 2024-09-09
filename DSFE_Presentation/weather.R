@@ -20,11 +20,15 @@ library(readr)
 
 ## Rainfall
 
-precip <- read_csv("noaa_data.csv")
+#"noaa_data.csv"
+
+#"cin_rain.csv"
+
+precip <- read_csv("cin_rain.csv")
 head(precip)
 
 ggplot(precip, aes(x = DATE, y = PRCP)) +
-  geom_bar(position="dodge", stat="identity", fill="coral2") +
+  geom_bar(position="dodge", stat="identity", fill="steelblue") +
   labs(x = "Date", y = "Rainfall")
 
 precip$day <- format(precip$DATE, format = "%b %d")
@@ -35,20 +39,23 @@ head(precip)
 precip_m <- precip %>% 
   group_by(day) %>%
   summarize(mean_rain = mean(PRCP, na.rm = TRUE)) %>%
-  filter(mean_rain > 0.125)
+  filter(mean_rain > 0.3)
 
 ggplot(precip_m, aes(x = day, y = mean_rain)) +
-  geom_bar(position="dodge", stat="identity", fill="coral2") +
-  labs(x = "Date", y = "Rainfall")
+  geom_bar(position="dodge", stat="identity", fill="steelblue") +
+  labs(x = "", y = "Rainfall")
 
 precip_avg <- precip %>% 
-  filter(PRCP > 0.125) %>%
+  filter(PRCP > 0.25) %>%
   group_by(month) %>%
   summarize(rain_days = n() / 6)
 
 ggplot(precip_avg, aes(x = month, y = rain_days)) +
-  geom_bar(position="dodge", stat="identity", fill="coral2") +
-  labs(x = "Date", y = "Days Rainfall > 0.125")
+  geom_bar(position="dodge", stat="identity", fill="steelblue") +
+  scale_x_discrete(limits=c("Jan", "Feb", "Mar", "Apr",
+                            "May", "Jun", "Jul", "Aug", "Sep",
+                            "Oct", "Nov", "Dec")) +
+  labs(x = "Date", y = "Days Rainfall > 0.25")
 
 ## Temp
 

@@ -12,7 +12,7 @@ fredr_set_key("02068cf41e8c95b7ed918d614b9c459b")
 
 #current data date (most recent update)
 
-start_date = "2025-01-01"
+start_date = "2016-01-01"
 data_date = "2026-01-01"
 t_per = time_length(start_date %--% data_date, unit = "days")
 
@@ -105,6 +105,7 @@ index_chng <- index_chng %>%
             )
           )
 
+write.csv(index_chng, "index_chng.csv")
 
 
 

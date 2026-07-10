@@ -12,7 +12,7 @@ fredr_set_key("02068cf41e8c95b7ed918d614b9c459b")
 
 #current data date (most recent update)
 
-start_date = "2016-01-01"
+start_date = "2025-01-01"
 data_date = "2026-01-01"
 t_per = time_length(start_date %--% data_date, unit = "days")
 
@@ -49,6 +49,8 @@ dry_index <- "WPU13710102"
 
 ppi_index <- "PPIACO"
 
+lab_index <- "CES2000000003"
+
 #### Tables ####
 
 cnc <- api_data_pro(cnc, cnc_index, col1 = "Date", 
@@ -68,6 +70,9 @@ pnt <- api_data_pro(pnt, pnt_index, col1 = "Date",
 
 ppi <- api_data_pro(ppi, ppi_index, col1 = "Date", 
                     col2 = "ppi")
+
+lab <- api_data_pro(lab, lab_index, col1 = "Date", 
+                    col2 = "lab")
 
 #### Plots ####
 
@@ -89,19 +94,23 @@ ggplot(pnt, aes(x = Date, y = paint)) +
 ggplot(ppi, aes(x = Date, y = ppi)) +
   geom_line()
 
+ggplot(lab, aes(x = Date, y = lab)) +
+  geom_line()
+
 #### Changes ####
 
 index_chng <- data.frame(index = character(0), result = numeric(0))
 
 index_chng <- index_chng %>%
-  add_row(index = c("CNC", "STL", "LMB", "DRY", "PNT", "PPI"),
+  add_row(index = c("CNC", "STL", "LMB", "DRY", "PNT", "PPI", "LAB"),
           result = c(
             cnc %>% summarise(result = ((last(concrete) - first(concrete)) / first(concrete))) %>% pull(result), 
             stl %>% summarise(result = ((last(steel) - first(steel)) / first(steel))) %>% pull(result),
             lmb %>% summarise(result = ((last(lumber) - first(lumber)) / first(lumber))) %>% pull(result),
             dry %>% summarise(result = ((last(drywall) - first(drywall)) / first(drywall))) %>% pull(result),
             pnt %>% summarise(result = ((last(paint) - first(paint)) / first(paint))) %>% pull(result),
-            ppi %>% summarise(result = ((last(ppi) - first(ppi)) / first(ppi))) %>% pull(result)
+            ppi %>% summarise(result = ((last(ppi) - first(ppi)) / first(ppi))) %>% pull(result),
+            lab %>% summarise(result = ((last(lab) - first(lab)) / first(lab))) %>% pull(result)
             )
           )
 

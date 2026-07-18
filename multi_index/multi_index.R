@@ -10,7 +10,7 @@ library(tidyverse)
 
 fredr_set_key("02068cf41e8c95b7ed918d614b9c459b")
 
-#current data date (most recent update)
+#current data date
 
 start_date = "2025-01-01"
 data_date = "2026-01-01"

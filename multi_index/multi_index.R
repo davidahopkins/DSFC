@@ -8,7 +8,7 @@ library(tidyverse)
 
 #### Global Var ####
 
-fredr_set_key("02068cf41e8c95b7ed918d614b9c459b")
+fredr_set_key("ENTER YOUR API CODE HERE")
 
 #current data date
 

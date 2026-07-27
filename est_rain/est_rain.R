@@ -36,22 +36,33 @@ ggplot(rain_count, aes(Month, rain_days)) +
   geom_col(color = "purple")
 
 fit <- rain_count %>%
-  model(arima_model = ARIMA(rain_days))
+  model(forecast_model = ARIMA(rain_days))
 
 
-fc <- fit %>%
+forecast <- fit %>%
   forecast(h = "12 month")
 
-autoplot(fc, rain_count)
+autoplot(forecast, rain_count)
 
-rain_forecast <- fc %>%
+rain_forecast <- forecast %>%
   rename(rain_days_model = rain_days) %>%
-  mutate(rain_days = .mean, type = "forecast") %>%
+  mutate(int_95 = hilo(rain_days_model, 95),
+         int_80 = hilo(rain_days_model, 80),
+         rain_days = .mean, 
+         type = "forecast") %>%
   as_tsibble() %>%
-  select(Month, rain_days, type)
+  unpack_hilo(c(int_95, int_80)) %>%
+  mutate(int_95_lower = pmax(0, int_95_lower),
+         int_80_lower = pmax(0, int_80_lower)) %>%
+  select(Month, rain_days, type, int_95_upper,
+         int_95_lower, int_80_upper, int_80_lower)
 
-rain_count <- rain_count %>% 
-  mutate(type = "historical")
+rain_count <- rain_count %>%
+  mutate(int_95_upper = rain_days,
+         int_95_lower = rain_days,
+         int_80_upper = rain_days,
+         int_80_lower = rain_days, 
+         type = "historical")
 
 bind_rows(rain_count, rain_forecast) %>%
   ggplot(aes(x = Month, y = rain_days, fill = type)) +
@@ -60,6 +71,27 @@ bind_rows(rain_count, rain_forecast) %>%
                                "forecast" = "blue")) +
   labs(title = "Rain Day Forecast", 
        x = "Date", 
-       y = "Days of Rain (over 0.25)")
+       y = "Days w/Rain over 0.25 in") +
+  theme(legend.title = element_blank())
+
+bind_rows(rain_count, rain_forecast) %>%
+  ggplot(aes(x = Month, y = rain_days, fill = type)) +
+  geom_ribbon(aes(ymin = int_95_lower, ymax = int_95_upper,
+                  fill = "steelblue", alpha = 0.15),
+                  show.legend = FALSE)) +
+  geom_ribbon(aes(ymin = int_80_lower, ymax = int_80_upper,
+                  fill = "steelblue", alpa = 0.25),
+                  show.legend = FALSE))+
+  geom_col() +
+  geom_errorbar(data = filter(bind_rows(rain_count, rain_forecast),
+                              data_type == "Forecast"),
+                aes(ymin = int_95_lower, ymax = int_95_upper),
+                width = 0.2, color = "darkblue", alpha = 0.7) +
+  scale_fill_manual(values = c("historical" = "purple", 
+                               "forecast" = "blue")) +
+  labs(title = "Rain Day Forecast", 
+       x = "Date", 
+       y = "Days w/Rain over 0.25 in") +
+  theme(legend.title = element_blank())
 
 

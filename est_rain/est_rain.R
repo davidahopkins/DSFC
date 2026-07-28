@@ -38,7 +38,6 @@ ggplot(rain_count, aes(Month, rain_days)) +
 fit <- rain_count %>%
   model(forecast_model = ARIMA(rain_days))
 
-
 forecast <- fit %>%
   forecast(h = "12 month")
 
@@ -77,11 +76,19 @@ bind_rows(rain_count, rain_forecast) %>%
 rain_data <- bind_rows(rain_count, rain_forecast)
 
 forecast_ttls <- rain_forecast %>%
+  as_tibble() %>%
+  ungroup() %>%
   summarise(ttl_mean = round(sum(rain_days), 1),
             ttl_95_up = round(sum(int_95_upper), 1),
             ttl_95_low = round(sum(int_95_lower), 1),
             ttl_80_up = round(sum(int_80_upper), 1),
             ttl_80_low = round(sum(int_80_lower), 1))
+
+ttl_metrics <- paste0(
+  "Forecast Metrics:\n",
+  "Mean: ", forecast_ttls$ttl_mean, " days\n",
+  "80% CI: ", forecast_ttls$ttl_80_up, " days\n",
+  "95% CI: ", forecast_ttls$ttl_95_up, " days\n")
 
 ggplot(rain_data, aes(x = Month, y = rain_days)) + 
   geom_linerange(data = filter(rain_data, type == "Forecast"), 
@@ -96,6 +103,12 @@ ggplot(rain_data, aes(x = Month, y = rain_days)) +
               color = "darkblue", alpha = 0.8) + 
   scale_fill_manual(values = c("Historical" = "purple", 
                              "Forecast" = "blue")) + 
+  annotate(
+    "text",
+    x = max(rain_data$Month), y = Inf,
+    label = ttl_metrics,
+    hjust = .85, vjust = 1.1,
+    size = 4) + 
   labs(title = "Rain Day Forecast", 
      x = "Date", 
      y = "Days w/Rain over 0.25 in") + 
@@ -104,6 +117,4 @@ ggplot(rain_data, aes(x = Month, y = rain_days)) +
         plot.background = element_blank(),
         axis.ticks = element_blank(),
         panel.grid.major.y = element_line(color = "gray95"))
-
-
 
